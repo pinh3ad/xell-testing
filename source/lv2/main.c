@@ -274,6 +274,7 @@ int main(){
 	for(;;){
 		// try USB
                 updateXeLL("uda:/updxell.bin");
+                try_load_elf("uda:/initrd.gz");
 		try_load_elf("uda:/xenon.elf");
 		try_load_elf("uda:/xenon.z");
 		try_load_elf("uda:/vmlinux");
@@ -285,6 +286,7 @@ int main(){
 		
 		// try CD/DVD
                 updateXeLL("dvd:/updxell.bin");
+                try_load_elf("dvd:/initrd.gz");
 		try_load_elf("dvd:/xenon.elf");
 		try_load_elf("dvd:/xenon.z");
 		try_load_elf("dvd:/vmlinux"); 
