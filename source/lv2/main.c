@@ -272,9 +272,8 @@ int main(){
 #endif
 	printf("\n * Looking for xenon.elf or vmlinux on USB/CD/DVD or user-defined file via TFTP...\n\n");
 	for(;;){
-		updateXeLL("uda:/updxell.bin");
-				
 		// try USB
+                updateXeLL("uda:/updxell.bin");
 		try_load_elf("uda:/xenon.elf");
 		try_load_elf("uda:/xenon.z");
 		try_load_elf("uda:/vmlinux");
@@ -285,6 +284,7 @@ int main(){
 		boot_tftp(boot_server_name(),boot_file_name());
 		
 		// try CD/DVD
+                updateXeLL("dvd:/updxell.bin");
 		try_load_elf("dvd:/xenon.elf");
 		try_load_elf("dvd:/xenon.z");
 		try_load_elf("dvd:/vmlinux"); 

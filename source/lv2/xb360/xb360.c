@@ -17,6 +17,7 @@
 
 extern char elfhdr[];
 extern struct XCONFIG_SECURED_SETTINGS secured_settings;
+extern void wait_and_cleanup_line();
 
 extern struct sfc sfc;
 
@@ -129,7 +130,6 @@ int get_virtual_fuses(unsigned char *v_cpukey)
     //now we need to verify the data somehow
   if (data[0x0]==0xC0 && data[0x1]==0xFF && data[0x2] == 0xFF && data[0x3] == 0xFF)
   {
-	int i;
 	memcpy(v_cpukey,&data[0x20],0x10);
     	return 0;
   }
@@ -314,6 +314,8 @@ int updateXeLL(char *path)
     unsigned char *updxell, *user, *spare;
     
     /* Check if updxell.bin is present */
+    wait_and_cleanup_line();
+    printf("Trying %s...",path);
     f = fopen(path, "rb");
     if (!f){
         return -1; //Can't find/open updxell.bin from USB
@@ -410,9 +412,9 @@ int updateXeLL(char *path)
 
 	     if (!(sfcx_is_pageerased(pagebuf))) // We dont need to write to erased pages
 	     {
-             memset(&pagebuf[sfc.page_sz+0x0C],0x0, 4); //zero only EDC bytes
-             sfcx_calcecc((unsigned int *)pagebuf); 	  //recalc EDC bytes
-             sfcx_write_page(pagebuf, i*sfc.page_sz);
+                memset(&pagebuf[sfc.page_sz+0x0C],0x0, 4); //zero only EDC bytes
+                sfcx_calcecc((unsigned int *)pagebuf); 	  //recalc EDC bytes
+                sfcx_write_page(pagebuf, i*sfc.page_sz);
 	     }
          }
          printf(" * XeLL flashed! Reboot the xbox to enjoy the new build\n");
