@@ -1,0 +1,33 @@
+#KBOOTCONFIG
+; #KBOOTCONFIG (and nothing else) has to stay in FIRST line of the file
+
+# General XeLL options
+; netconfig
+ip=192.168.11.36
+netmask=255.255.255.0
+gateway=192.168.11.1
+
+; set custom tftp server IP
+tftp_server=192.168.11.40
+
+; refer to xenos.h for available videomodes
+videomode=10
+
+# Linux/ELF BootMenu
+; label of the default bootentry
+default=only_elf_tftp
+
+; timeout of the bootmenu in seconds
+timeout=10
+
+; Kernel 
+; ! first parameter: kernel path !
+
+zlx_browser_tftp="/xenon/zlx_browser"
+nullDC_usb="uda:/nulldc-360.elf"
+linux_usb_noinitrd="uda:/casper/vmlinuz boot=casper console=tty0 console=ttyS0,115200n8 video=xenonfb panic=60"
+linux_usb="uda:/casper/vmlinuz boot=casper initrd=uda:/casper/initrd.gz console=tty0 console=ttyS0,115200n8 video=xenonfb panic=60"
+linux_tftp_nosubdir="xenon initrd=initrd.gz root=/dev/nfs nfsroot=192.168.1.98:/mnt/sdc/nfs/xbox_v2 rw console=tty0 console=ttyS0,115200n8 ip=dhcp video=xenonfb panic=60 maxcpus=3 noplymouth nosplash"
+linux_tftp_subdir="/xbox/xenon initrd=/casper/initrd.gz console=tty0 console=ttyS0,115200n8 video=xenonfb panic=60"
+linux_dvd="dvd:/casper/vmlinuz boot=casper initrd=dvd:/casper/initrd.gz console=tty0 console=ttyS0,115200n8 video=xenonfb panic=60"
+linux_hdd="sda:/vmlinux root=/dev/nfs initrd=sda:/xbox/initrd.gz console=tty0 console=ttyS0,115200n8 video=xenonfb panic=60"
