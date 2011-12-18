@@ -30,6 +30,7 @@
 #include "config.h"
 #include "zlib/xell_lib.h"
 #include "tftp/tftp.h"
+#include "kboot/kbootconf.h"
 
 extern char dt_blob_start[];
 extern char dt_blob_end[];
@@ -38,6 +39,7 @@ static void *initrd_buf;
 
 const unsigned char elfhdr[] = {0x7f, 'E', 'L', 'F'};
 const unsigned char cpiohdr[] = {0x30, 0x37, 0x30, 0x37};
+const unsigned char kboothdr[] = "#KBOOTCONFIG";
 
 void do_asciiart()
 {
@@ -115,6 +117,12 @@ void launch_elf(void * addr, unsigned len){
 		printf(" * Executing...\n");
 		elf_runWithDeviceTree(addr,len,dt_blob_start,dt_blob_end-dt_blob_start);
 	}
+	//Check kbootconf header
+    else if (!memcmp(addr, kboothdr,12))
+        {
+                printf(" * Found kbootconfig header ...\n");
+                try_kbootconf(addr,len);
+        }
 	//Check cpio header or initrd_found flag
     else if (!memcmp(addr,cpiohdr,4)||initrd_found)
     {
