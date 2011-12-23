@@ -96,7 +96,7 @@ void launch_elf(void * addr, unsigned len){
 		int destsize = 0;
 		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0){
 			//relocate elf ...
-            if(!memcmp(addr,cpiohdr,4))
+            if(!memcmp(dest,cpiohdr,4))
             	initrd_found = 1;
             else /* Dont overwrite sourcefile if unpacked file is cpio/initrd */
 				memcpy(addr,dest,destsize);
