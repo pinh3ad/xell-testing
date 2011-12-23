@@ -14,7 +14,6 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #define MAX_KERNELS 64
 
 struct kbootkernel {
-        int tftp;
 	char *label;
 	char *kernel;
 	char *initrd;

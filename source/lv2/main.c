@@ -35,8 +35,6 @@
 extern char dt_blob_start[];
 extern char dt_blob_end[];
 
-static void *initrd_buf;
-
 const unsigned char elfhdr[] = {0x7f, 'E', 'L', 'F'};
 const unsigned char cpiohdr[] = {0x30, 0x37, 0x30, 0x37};
 const unsigned char kboothdr[] = "#KBOOTCONFIG";
@@ -96,9 +94,9 @@ void launch_elf(void * addr, unsigned len){
 		int destsize = 0;
 		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0){
 			//relocate elf ...
-            if(!memcmp(dest,cpiohdr,4))
-            	initrd_found = 1;
-            else /* Dont overwrite sourcefile if unpacked file is cpio/initrd */
+                        if(!memcmp(dest,cpiohdr,4))
+                                initrd_found = 1;
+                        else /* Dont overwrite sourcefile if unpacked file is cpio/initrd */
 				memcpy(addr,dest,destsize);
 			printf(" * Successfully unpacked...\n");
 			free(dest);
@@ -118,23 +116,19 @@ void launch_elf(void * addr, unsigned len){
 		elf_runWithDeviceTree(addr,len,dt_blob_start,dt_blob_end-dt_blob_start);
 	}
 	//Check kbootconf header
-    else if (!memcmp(addr, kboothdr,12))
+        else if (!memcmp(addr, kboothdr,12))
         {
                 printf(" * Found kbootconfig header ...\n");
                 try_kbootconf(addr,len);
         }
 	//Check cpio header or initrd_found flag
-    else if (!memcmp(addr,cpiohdr,4)||initrd_found)
-    {
-    	printf(" * Found initrd/cpio file ...\n");
-    	if(initrd_buf != 0)
-        	free(initrd_buf);
-        initrd_buf = (void*)malloc(len);
-        memcpy(initrd_buf,addr,len);
-        kernel_set_initrd(initrd_buf,len);
-    }
-	else
-		printf(" * Bad ELF header!\n");
+        else if (!memcmp(addr,cpiohdr,4)||initrd_found)
+        {
+                printf(" * Found initrd/cpio file ...\n");
+                kernel_set_initrd(addr,len);
+        }
+        else
+                printf(" * Bad header!\n");
 }
 
 int try_load_elf(char *filename)
