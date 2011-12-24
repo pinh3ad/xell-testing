@@ -392,6 +392,8 @@ void try_kbootconf(void * addr, unsigned len){
     
     if (conf.kernels[boot_entry].parameters)
         kernel_build_cmdline(conf.kernels[boot_entry].parameters,conf.kernels[boot_entry].root);
+
+    kernel_reset_initrd();
         
     if (conf.kernels[boot_entry].initrd)
     {
