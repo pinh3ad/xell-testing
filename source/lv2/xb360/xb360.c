@@ -337,7 +337,7 @@ int updateXeLL(char *path)
         return -1;
     }
     
-    printf(" * found XeLL update. press power NOW if you don't want to update.\n");
+    printf("\n * found XeLL update. press power NOW if you don't want to update.\n");
     delay(15);
     
     for (k = 0; k < XELL_OFFSET_COUNT; k++)

@@ -39,6 +39,8 @@ static struct controller_data_s old_ctrl;
 extern int try_load_elf(char *filename);
 extern char *boot_server_name();
 
+#define LOAD_FILE(x,tftp) {if(!strncmp(x,"uda:/",4)||!strncmp(x,"dvd:/",4)||!strncmp(x,"sda:/",4))try_load_elf(x); else boot_tftp(tftp?tftp:boot_server_name(),x);}
+
 char *strip(char *buf)
 {
 	while (*buf == ' ' || *buf == '\t')
@@ -175,11 +177,6 @@ int kbootconf_parse(void)
 			}
 			conf.kernels[conf.num_kernels].label = left;
                         conf.kernels[conf.num_kernels].kernel = right;
-                        
-                        if(!strncmp(right,"uda:/",4)||!strncmp(right,"dvd:/",4)||!strncmp(right,"sda:/",4))
-                            conf.kernels[conf.num_kernels].tftp = 0;
-                        else
-                            conf.kernels[conf.num_kernels].tftp = 1;
                         
 			char *p = strchr(right, ' ');
 			if (!p) {
@@ -395,30 +392,17 @@ void try_kbootconf(void * addr, unsigned len){
     
     if (conf.kernels[boot_entry].parameters)
         kernel_build_cmdline(conf.kernels[boot_entry].parameters,conf.kernels[boot_entry].root);
-    
-    if (conf.kernels[boot_entry].tftp)
-    { 
-        char *tftp_server;
-        printf("Loading files via TFTP ...\n");
-        if (conf.tftp_server)
-            tftp_server = conf.tftp_server ;
-        else
-            tftp_server = boot_server_name();
+
+    kernel_reset_initrd();
         
-        if (conf.kernels[boot_entry].initrd)
-            boot_tftp(tftp_server,conf.kernels[boot_entry].initrd);
-        
-        boot_tftp(tftp_server,conf.kernels[boot_entry].kernel);
-    } else {
-        printf("Loading local files ...\n");
-        usb_do_poll();
-        
-        if (conf.kernels[boot_entry].initrd)
-            try_load_elf(conf.kernels[boot_entry].initrd);
-        
-        try_load_elf(conf.kernels[boot_entry].kernel);
-    }
-        
+    if (conf.kernels[boot_entry].initrd)
+    {
+        printf("Loading initrd ...\n");
+        LOAD_FILE(conf.kernels[boot_entry].initrd,conf.tftp_server);
+     }
+
+     printf("Loading kernel ...\n");
+     LOAD_FILE(conf.kernels[boot_entry].kernel,conf.tftp_server);
                 
     memset(conf_buf,0,MAX_KBOOTCONF_SIZE);
     conf.num_kernels = 0;

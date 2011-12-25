@@ -23,3 +23,6 @@ XeLL-Reloaded catches CPU threads, sets them up, loads an ELF file from either n
 * Supports upgrading with a 2-stage XeLL-Reloaded binary from USB, named "updxell.bin"
 * Infinite boot loop when looking for ELFs to execute.(no more rushing to get the live-cd in)
 * Parses / decrypts keyvault (either with real or virtual CPUkey)
+* Supports kboot.conf-type file
+* Supports external initramfs
+* Can pass a custom CMDLINE to linux kernel via kboot.conf
