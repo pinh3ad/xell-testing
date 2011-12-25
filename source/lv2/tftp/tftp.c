@@ -104,6 +104,31 @@ static void tftp_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_
 	pbuf_free(p);
 }
 
+int send_ack(struct udp_pcb *pcb)
+{
+				struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, 4, PBUF_RAM);
+
+				if (!p)
+				{
+					printf("internal error: out of memory!\n");
+					return -1;
+				}
+				
+				unsigned char *d = p->payload;
+				
+				*d++ = 0;
+				*d++ = TFTP_OPCODE_ACK;
+				*d++ = current_block >> 8;
+				*d++ = current_block & 0xFF;
+				
+				if (udp_send(pcb, p))
+					printf("TFTP: packet send error.");
+				pbuf_free(p);
+				
+
+				return 0;
+}
+
 int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 {
 /*	printf("TFTP boot from %u.%u.%u.%u:%s\n", 
@@ -198,24 +223,7 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 			}
 			case TFTP_STATE_ACK_SEND:
 			{
-				struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, 4, PBUF_RAM);
-
-				if (!p)
-				{
-					printf("internal error: out of memory!\n");
-					break;
-				}
-				
-				unsigned char *d = p->payload;
-				
-				*d++ = 0;
-				*d++ = TFTP_OPCODE_ACK;
-				*d++ = current_block >> 8;
-				*d++ = current_block & 0xFF;
-				
-				if (udp_send(pcb, p))
-					printf("TFTP: packet send error.");
-				pbuf_free(p);
+				send_ack(pcb);
 				send = 0;
 				break;
 			}
@@ -229,6 +237,7 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 	//printf("tftp result: %d\n", tftp_result);
 	if (!tftp_result)
 	{
+		send_ack(pcb);
 		uint64_t end;
 		end=mftb();
 		printf("%d packets (%d bytes, %d packet size), received in %dms, %d kb/s\n",
