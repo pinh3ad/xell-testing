@@ -22,6 +22,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #include <elf/elf.h>
 #include <usb/usbmain.h>
 #include <console/console.h>
+#include <xenon_soc/xenon_power.h>
 
 #include "tftp/tftp.h"
 #include "kbootconf.h"
@@ -76,6 +77,11 @@ void kboot_set_config(void)
             xenos_init(conf.videomode);
             printf(" * Xenos re-initalized\n");
         }
+	
+	if(conf.speedup == 1){
+		printf("Speeding up CPU\n");
+		xenon_make_it_faster(XENON_SPEED_FULL);
+	}
         
         if (conf.ipaddress && conf.ipaddress[0]){
             printf(" * taking network down to set config values\n");
@@ -160,6 +166,8 @@ int kbootconf_parse(void)
 			droot = right;
 		} else if (!strcmp(left, "videomode")) {
 			conf.videomode = atoi(right);
+		} else if (!strcmp(left, "speedup")) {
+			conf.speedup = atoi(right);
                 } else if (!strcmp(left, "tftp_server")) {
 			conf.tftp_server = right;
                 } else if (!strcmp(left, "ip")) {

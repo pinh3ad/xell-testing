@@ -25,6 +25,7 @@ struct kbootkernel {
 struct kbootconf {
 	int timeout;
         int videomode;
+	int speedup;
 	char *msgfile;
         char *tftp_server;
         char *ipaddress;
