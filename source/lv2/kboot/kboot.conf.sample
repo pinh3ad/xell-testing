@@ -13,6 +13,9 @@ tftp_server=192.168.11.40
 ; refer to xenos.h for available videomodes
 videomode=10
 
+;speed up cpu
+speedup=1
+
 # Linux/ELF BootMenu
 ; label of the default bootentry
 default=only_elf_tftp
