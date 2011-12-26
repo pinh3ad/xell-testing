@@ -316,6 +316,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
    int min = 0;
    int delta, olddelta = -1;
    int timeout_disabled = 0;
+   int old_default = defaultchoice;
    uint64_t start;
    
     start = mftb();
@@ -323,7 +324,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
     
     if (defaultchoice < 0) defaultchoice = 0;
     
-    while (delta <= timeout || timeout_disabled == 1) {
+    while (delta <= timeout || timeout_disabled) {
         
        /* measure seconds since menu start */
        delta = tb_diff_sec(mftb(), start);
@@ -353,15 +354,9 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         if (ch >= min && ch <= max)
                 return ch;
         else if (ch == IR_UP && (defaultchoice < max-1))
-	{
                 defaultchoice++;
-		timeout_disabled = 1;
-	}
         else if(ch == IR_DOWN && (defaultchoice > min))
-	{
                 defaultchoice--;
-		timeout_disabled = 1;
-	}
         else if(ch == IR_OK)
                 return defaultchoice;    
         redraw = 1;   
@@ -378,21 +373,18 @@ int user_prompt(int defaultchoice, int max, int timeout) {
          if ((ctrl.a != old_ctrl.a) || (ctrl.start != old_ctrl.start))
              return defaultchoice;
          else if ((ctrl.up != old_ctrl.up) && (defaultchoice < max-1))
-	 {
              defaultchoice++;
-	     timeout_disabled = 1;
-	 }
          else if ((ctrl.down != old_ctrl.down) && (defaultchoice > min))
-	 {
              defaultchoice--;
-	     timeout_disabled = 1;
-	 }
         old_ctrl=ctrl;
         redraw = 1;
        }
 
     network_poll();
     usb_do_poll();
+
+    if(old_default != defaultchoice)
+	timeout_disabled = 1;
     }
 printf("\nTimeout.\n");
 return defaultchoice;
