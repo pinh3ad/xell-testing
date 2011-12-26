@@ -315,6 +315,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
    int redraw = 1;
    int min = 0;
    int delta, olddelta = -1;
+   int timeout_disabled = 0;
    uint64_t start;
    
     start = mftb();
@@ -322,7 +323,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
     
     if (defaultchoice < 0) defaultchoice = 0;
     
-    while (delta <= timeout) {
+    while (delta <= timeout || timeout_disabled == 1) {
         
        /* measure seconds since menu start */
        delta = tb_diff_sec(mftb(), start);
@@ -333,8 +334,16 @@ int user_prompt(int defaultchoice, int max, int timeout) {
        }
        /* redraw prompt - clear line, then print prompt */
        if (redraw) {
+	if(timeout_disabled)
+	{
+         printf("                                                           \r[--] > %i",
+         defaultchoice);
+	}
+	else
+	{
          printf("                                                           \r[%02d] > %i",
          timeout - delta,defaultchoice);
+	}
          redraw = 0;
      }
 
@@ -344,9 +353,15 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         if (ch >= min && ch <= max)
                 return ch;
         else if (ch == IR_UP && (defaultchoice < max-1))
+	{
                 defaultchoice++;
+		timeout_disabled = 1;
+	}
         else if(ch == IR_DOWN && (defaultchoice > min))
+	{
                 defaultchoice--;
+		timeout_disabled = 1;
+	}
         else if(ch == IR_OK)
                 return defaultchoice;    
         redraw = 1;   
@@ -363,9 +378,15 @@ int user_prompt(int defaultchoice, int max, int timeout) {
          if ((ctrl.a != old_ctrl.a) || (ctrl.start != old_ctrl.start))
              return defaultchoice;
          else if ((ctrl.up != old_ctrl.up) && (defaultchoice < max-1))
+	 {
              defaultchoice++;
+	     timeout_disabled = 1;
+	 }
          else if ((ctrl.down != old_ctrl.down) && (defaultchoice > min))
+	 {
              defaultchoice--;
+	     timeout_disabled = 1;
+	 }
         old_ctrl=ctrl;
         redraw = 1;
        }
