@@ -122,7 +122,11 @@ int send_ack(struct udp_pcb *pcb)
 				*d++ = current_block & 0xFF;
 				
 				if (udp_send(pcb, p))
+				{
 					printf("TFTP: packet send error.");
+					pbuf_free(p);
+					return -1;
+				}
 				pbuf_free(p);
 				
 
@@ -150,7 +154,7 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 	
 	tftp_state = TFTP_STATE_RRQ_SEND;
 	current_block = 0;
-	last_size = 0;
+	last_size = 512;//Last size has to be 512 or greater - this should fix files smaller than 1 DATA packet
 	ptr = 0;
 	
 	start=mftb();
@@ -223,7 +227,11 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 			}
 			case TFTP_STATE_ACK_SEND:
 			{
-				send_ack(pcb);
+				if(send_ack(pcb) != 0)
+				{
+					udp_remove(pcb);
+					return -1;
+				}
 				send = 0;
 				break;
 			}
@@ -237,7 +245,11 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 	//printf("tftp result: %d\n", tftp_result);
 	if (!tftp_result)
 	{
-		send_ack(pcb);
+		if(send_ack(pcb) != 0)
+		{
+			udp_remove(pcb);
+			return -1;
+		}
 		uint64_t end;
 		end=mftb();
 		printf("%d packets (%d bytes, %d packet size), received in %dms, %d kb/s\n",
