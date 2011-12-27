@@ -363,10 +363,18 @@ int user_prompt(int defaultchoice, int max, int timeout) {
       }
 
       if (kbhit()) {
-        int num = getch() - '0';
-        if (num >= min && num <= max-1){
+	char ch = getch();
+        int num = ch - '0';
+
+	if (ch == 0xD)
+	  return defaultchoice;
+        else if (num >= min && num <= max-1)
           return num;
-        }
+        else if (ch == 0x41 && (defaultchoice < max-1))
+          defaultchoice++;
+        else if(ch == 0x42 && (defaultchoice > min))
+          defaultchoice--;
+        
         redraw = 1;
       }
        if (get_controller_data(&ctrl, 0)) {
