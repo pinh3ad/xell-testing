@@ -34,6 +34,7 @@
 
 extern char dt_blob_start[];
 extern char dt_blob_end[];
+extern char *kboot_tftp;
 
 const unsigned char elfhdr[] = {0x7f, 'E', 'L', 'F'};
 const unsigned char cpiohdr[] = {0x30, 0x37, 0x30, 0x37};
@@ -65,7 +66,10 @@ void wait_and_cleanup_line()
 }
 
 char *boot_server_name()
-{
+{       
+    if (kboot_tftp && kboot_tftp[0])
+        return kboot_tftp;
+            
 	if (netif.dhcp && netif.dhcp->boot_server_name[0])
     	return netif.dhcp->boot_server_name;
 	

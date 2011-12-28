@@ -31,7 +31,7 @@ int boot_entry;
 char conf_buf[MAX_KBOOTCONF_SIZE];
 struct kbootconf conf;
 ip_addr_t oldipaddr, oldnetmask, oldgateway;
-
+char *kboot_tftp;
 enum ir_remote_codes IR;
 static struct controller_data_s ctrl;
 static struct controller_data_s old_ctrl;
@@ -42,7 +42,7 @@ extern char *boot_server_name();
 /* network.h */
 extern struct netif netif;
 
-#define LOAD_FILE(x,tftp) {if(!strncmp(x,"uda:/",4)||!strncmp(x,"dvd:/",4)||!strncmp(x,"sda:/",4))try_load_elf(x); else boot_tftp(tftp?tftp:boot_server_name(),x);}
+#define LOAD_FILE(x) {if(!strncmp(x,"uda:/",4)||!strncmp(x,"dvd:/",4)||!strncmp(x,"sda:/",4))try_load_elf(x); else boot_tftp(boot_server_name(),x);}
 
 char *strip(char *buf)
 {
@@ -74,8 +74,11 @@ void kboot_set_config(void)
         
         int setnetconfig = 0;
         static int oldvideomode = -1;
-        ip_addr_t ipaddr, netmask, gateway;
+        ip_addr_t ipaddr, netmask, gateway, tftpserver;
         
+		if (ipaddr_aton(conf.tftp_server,&tftpserver))
+			kboot_tftp = conf.tftp_server;
+
         /* Only reinit network if IPs dont match which got set by kboot on previous try*/
         if (ipaddr_aton(conf.ipaddress,&ipaddr) && ip_addr_cmp(&oldipaddr,&ipaddr) == 0)
         {
@@ -437,11 +440,11 @@ void try_kbootconf(void * addr, unsigned len){
     if (conf.kernels[boot_entry].initrd)
     {
         printf("Loading initrd ...\n");
-        LOAD_FILE(conf.kernels[boot_entry].initrd,conf.tftp_server);
+        LOAD_FILE(conf.kernels[boot_entry].initrd);
      }
 
      printf("Loading kernel ...\n");
-     LOAD_FILE(conf.kernels[boot_entry].kernel,conf.tftp_server);
+     LOAD_FILE(conf.kernels[boot_entry].kernel);
                 
     memset(conf_buf,0,MAX_KBOOTCONF_SIZE);
     conf.num_kernels = 0;
