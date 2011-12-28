@@ -30,7 +30,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 int boot_entry;
 char conf_buf[MAX_KBOOTCONF_SIZE];
 struct kbootconf conf;
-ip_addr_t oldipaddr;
+ip_addr_t oldipaddr, oldnetmask, oldgateway;
 
 enum ir_remote_codes IR;
 static struct controller_data_s ctrl;
