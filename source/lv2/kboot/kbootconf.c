@@ -30,8 +30,8 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 int boot_entry;
 char conf_buf[MAX_KBOOTCONF_SIZE];
 struct kbootconf conf;
+ip_addr_t oldipaddr;
 
-extern struct netif netif;
 enum ir_remote_codes IR;
 static struct controller_data_s ctrl;
 static struct controller_data_s old_ctrl;
@@ -39,6 +39,8 @@ static struct controller_data_s old_ctrl;
 /* main.c */
 extern int try_load_elf(char *filename);
 extern char *boot_server_name();
+/* network.h */
+extern struct netif netif;
 
 #define LOAD_FILE(x,tftp) {if(!strncmp(x,"uda:/",4)||!strncmp(x,"dvd:/",4)||!strncmp(x,"sda:/",4))try_load_elf(x); else boot_tftp(tftp?tftp:boot_server_name(),x);}
 
@@ -69,44 +71,49 @@ void split(char *buf, char **left, char **right, char delim)
 
 void kboot_set_config(void)
 {
+        
+        int setnetconfig = 0;
         static int oldvideomode = -1;
         ip_addr_t ipaddr, netmask, gateway;
         
-        if(conf.videomode >= 0 && conf.videomode <= 11 && oldvideomode != conf.videomode){
+        /* Only reinit network if IPs dont match which got set by kboot on previous try*/
+        if (ipaddr_aton(conf.ipaddress,&ipaddr) && ip_addr_cmp(&oldipaddr,&ipaddr) == 0)
+        {
+                printf(" * taking network down to set config values\n");
+                setnetconfig = 1;
+                netif_set_down(&netif);
+                
+                netif_set_ipaddr(&netif,&ipaddr);
+                ip_addr_set(&oldipaddr,&ipaddr);
+        }
+
+        if (ipaddr_aton(conf.netmask,&netmask) && setnetconfig){
+                netif_set_netmask(&netif,&netmask);
+                ip_addr_set(&oldnetmask,&netmask);
+        }
+        
+        if (ipaddr_aton(conf.gateway,&gateway) && setnetconfig){
+                netif_set_gw(&netif,&gateway);
+                ip_addr_set(&oldgateway,&gateway); 
+        }
+        
+        if (setnetconfig){
+           printf(" * bringing network back up...\n");
+           netif_set_up(&netif);
+           network_print_config();
+        }
+        
+        if(conf.videomode > VIDEO_MODE_AUTO && conf.videomode <= VIDEO_MODE_NTSC && oldvideomode != conf.videomode){
             oldvideomode = conf.videomode;
             xenos_init(conf.videomode);
             printf(" * Xenos re-initalized\n");
         }
 	
-	if(conf.speedup == 1){
+	if(conf.speedup >= XENON_SPEED_FULL && conf.speedup <= XENON_SPEED_1_3){ //speedmode: drivers/xenon_soc/xenon_power.h
 		printf("Speeding up CPU\n");
-		xenon_make_it_faster(XENON_SPEED_FULL);
+		xenon_make_it_faster(conf.speedup);
 	}
         
-        if (conf.ipaddress && conf.ipaddress[0]){
-            printf(" * taking network down to set config values\n");
-            netif_set_down(&netif);
-            if(ipaddr_aton(conf.ipaddress,&ipaddr)){
-                netif_set_ipaddr(&netif,&ipaddr);
-                printf(" * set ip: %s\n",conf.ipaddress);
-            }
-        } else
-            return;
-        if (conf.netmask && conf.netmask[0]){
-            if (ip4_addr_netmask_valid(ipaddr_addr(conf.netmask))){
-                ipaddr_aton(conf.netmask,&netmask);
-                netif_set_netmask(&netif,&netmask);
-                printf(" * set netmask: %s\n",conf.netmask);
-            }
-        }
-        if (conf.gateway && conf.gateway[0]){
-            if(ipaddr_aton(conf.gateway,&gateway)){
-                netif_set_gw(&netif,&gateway);
-                printf(" * set gateway: %s\n",conf.gateway);
-            }
-        }
-        printf(" * bringing network back up...\n");
-        netif_set_up(&netif);
 }
 
 int kbootconf_parse(void)
@@ -402,12 +409,15 @@ void try_kbootconf(void * addr, unsigned len){
     memcpy(conf_buf,addr,len);
     conf_buf[len] = 0; //ensure null-termination
     
-    if(kbootconf_parse() == 0){
+    kbootconf_parse();
+    kboot_set_config();
+    
+    if (conf.num_kernels == 0){
        printf(" ! No kernels found in kboot.conf !\n");
        printf(" ! Aborting\n");
        return;
     }
-    kboot_set_config();
+    
     console_clrscr();
     int i;
     printf("\nXeLL Main Menu. Please choose from:\n\n");
