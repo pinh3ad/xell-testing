@@ -30,8 +30,8 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 int boot_entry;
 char conf_buf[MAX_KBOOTCONF_SIZE];
 struct kbootconf conf;
-
-extern struct netif netif;
+ip_addr_t oldipaddr, oldnetmask, oldgateway;
+char *kboot_tftp;
 enum ir_remote_codes IR;
 static struct controller_data_s ctrl;
 static struct controller_data_s old_ctrl;
@@ -39,8 +39,10 @@ static struct controller_data_s old_ctrl;
 /* main.c */
 extern int try_load_elf(char *filename);
 extern char *boot_server_name();
+/* network.h */
+extern struct netif netif;
 
-#define LOAD_FILE(x,tftp) {if(!strncmp(x,"uda:/",4)||!strncmp(x,"dvd:/",4)||!strncmp(x,"sda:/",4))try_load_elf(x); else boot_tftp(tftp?tftp:boot_server_name(),x);}
+#define LOAD_FILE(x) {if(!strncmp(x,"uda:/",4)||!strncmp(x,"dvd:/",4)||!strncmp(x,"sda:/",4))try_load_elf(x); else boot_tftp(boot_server_name(),x);}
 
 char *strip(char *buf)
 {
@@ -69,44 +71,52 @@ void split(char *buf, char **left, char **right, char delim)
 
 void kboot_set_config(void)
 {
-        static int oldvideomode = -1;
-        ip_addr_t ipaddr, netmask, gateway;
         
-        if(conf.videomode >= 0 && conf.videomode <= 11 && oldvideomode != conf.videomode){
+        int setnetconfig = 0;
+        static int oldvideomode = -1;
+        ip_addr_t ipaddr, netmask, gateway, tftpserver;
+        
+		if (ipaddr_aton(conf.tftp_server,&tftpserver))
+			kboot_tftp = conf.tftp_server;
+
+        /* Only reinit network if IPs dont match which got set by kboot on previous try*/
+        if (ipaddr_aton(conf.ipaddress,&ipaddr) && ip_addr_cmp(&oldipaddr,&ipaddr) == 0)
+        {
+                printf(" * taking network down to set config values\n");
+                setnetconfig = 1;
+                netif_set_down(&netif);
+                
+                netif_set_ipaddr(&netif,&ipaddr);
+                ip_addr_set(&oldipaddr,&ipaddr);
+        }
+
+        if (ipaddr_aton(conf.netmask,&netmask) && setnetconfig){
+                netif_set_netmask(&netif,&netmask);
+                ip_addr_set(&oldnetmask,&netmask);
+        }
+        
+        if (ipaddr_aton(conf.gateway,&gateway) && setnetconfig){
+                netif_set_gw(&netif,&gateway);
+                ip_addr_set(&oldgateway,&gateway); 
+        }
+        
+        if (setnetconfig){
+           printf(" * bringing network back up...\n");
+           netif_set_up(&netif);
+           network_print_config();
+        }
+        
+        if(conf.videomode > VIDEO_MODE_AUTO && conf.videomode <= VIDEO_MODE_NTSC && oldvideomode != conf.videomode){
             oldvideomode = conf.videomode;
             xenos_init(conf.videomode);
             printf(" * Xenos re-initalized\n");
         }
 	
-	if(conf.speedup == 1){
+	if(conf.speedup >= XENON_SPEED_FULL && conf.speedup <= XENON_SPEED_1_3){ //speedmode: drivers/xenon_soc/xenon_power.h
 		printf("Speeding up CPU\n");
-		xenon_make_it_faster(XENON_SPEED_FULL);
+		xenon_make_it_faster(conf.speedup);
 	}
         
-        if (conf.ipaddress && conf.ipaddress[0]){
-            printf(" * taking network down to set config values\n");
-            netif_set_down(&netif);
-            if(ipaddr_aton(conf.ipaddress,&ipaddr)){
-                netif_set_ipaddr(&netif,&ipaddr);
-                printf(" * set ip: %s\n",conf.ipaddress);
-            }
-        } else
-            return;
-        if (conf.netmask && conf.netmask[0]){
-            if (ip4_addr_netmask_valid(ipaddr_addr(conf.netmask))){
-                ipaddr_aton(conf.netmask,&netmask);
-                netif_set_netmask(&netif,&netmask);
-                printf(" * set netmask: %s\n",conf.netmask);
-            }
-        }
-        if (conf.gateway && conf.gateway[0]){
-            if(ipaddr_aton(conf.gateway,&gateway)){
-                netif_set_gw(&netif,&gateway);
-                printf(" * set gateway: %s\n",conf.gateway);
-            }
-        }
-        printf(" * bringing network back up...\n");
-        netif_set_up(&netif);
 }
 
 int kbootconf_parse(void)
@@ -316,6 +326,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
    int min = 0;
    int delta, olddelta = -1;
    int timeout_disabled = 0;
+   int old_default = defaultchoice;
    uint64_t start;
    
     start = mftb();
@@ -323,7 +334,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
     
     if (defaultchoice < 0) defaultchoice = 0;
     
-    while (delta <= timeout || timeout_disabled == 1) {
+    while (delta <= timeout || timeout_disabled) {
         
        /* measure seconds since menu start */
        delta = tb_diff_sec(mftb(), start);
@@ -353,46 +364,45 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         if (ch >= min && ch <= max)
                 return ch;
         else if (ch == IR_UP && (defaultchoice < max-1))
-	{
                 defaultchoice++;
-		timeout_disabled = 1;
-	}
         else if(ch == IR_DOWN && (defaultchoice > min))
-	{
                 defaultchoice--;
-		timeout_disabled = 1;
-	}
         else if(ch == IR_OK)
                 return defaultchoice;    
         redraw = 1;   
       }
 
       if (kbhit()) {
-        int num = getch() - '0';
-        if (num >= min && num <= max-1){
+	char ch = getch();
+        int num = ch - '0';
+
+	if (ch == 0xD)
+	  return defaultchoice;
+        else if (num >= min && num <= max-1)
           return num;
-        }
+        else if (ch == 0x41 && (defaultchoice < max-1))
+          defaultchoice++;
+        else if(ch == 0x42 && (defaultchoice > min))
+          defaultchoice--;
+        
         redraw = 1;
       }
        if (get_controller_data(&ctrl, 0)) {
          if ((ctrl.a != old_ctrl.a) || (ctrl.start != old_ctrl.start))
              return defaultchoice;
          else if ((ctrl.up != old_ctrl.up) && (defaultchoice < max-1))
-	 {
              defaultchoice++;
-	     timeout_disabled = 1;
-	 }
          else if ((ctrl.down != old_ctrl.down) && (defaultchoice > min))
-	 {
              defaultchoice--;
-	     timeout_disabled = 1;
-	 }
         old_ctrl=ctrl;
         redraw = 1;
        }
 
     network_poll();
     usb_do_poll();
+
+    if(old_default != defaultchoice)
+	timeout_disabled = 1;
     }
 printf("\nTimeout.\n");
 return defaultchoice;
@@ -402,12 +412,15 @@ void try_kbootconf(void * addr, unsigned len){
     memcpy(conf_buf,addr,len);
     conf_buf[len] = 0; //ensure null-termination
     
-    if(kbootconf_parse() == 0){
+    kbootconf_parse();
+    kboot_set_config();
+    
+    if (conf.num_kernels == 0){
        printf(" ! No kernels found in kboot.conf !\n");
        printf(" ! Aborting\n");
        return;
     }
-    kboot_set_config();
+    
     console_clrscr();
     int i;
     printf("\nXeLL Main Menu. Please choose from:\n\n");
@@ -427,11 +440,11 @@ void try_kbootconf(void * addr, unsigned len){
     if (conf.kernels[boot_entry].initrd)
     {
         printf("Loading initrd ...\n");
-        LOAD_FILE(conf.kernels[boot_entry].initrd,conf.tftp_server);
+        LOAD_FILE(conf.kernels[boot_entry].initrd);
      }
 
      printf("Loading kernel ...\n");
-     LOAD_FILE(conf.kernels[boot_entry].kernel,conf.tftp_server);
+     LOAD_FILE(conf.kernels[boot_entry].kernel);
                 
     memset(conf_buf,0,MAX_KBOOTCONF_SIZE);
     conf.num_kernels = 0;
