@@ -76,29 +76,33 @@ void kboot_set_config(void)
         static int oldvideomode = -1;
         ip_addr_t ipaddr, netmask, gateway, tftpserver;
         
+	if(conf.tftp_server != NULL)
 		if (ipaddr_aton(conf.tftp_server,&tftpserver))
 			kboot_tftp = conf.tftp_server;
 
         /* Only reinit network if IPs dont match which got set by kboot on previous try*/
-        if (ipaddr_aton(conf.ipaddress,&ipaddr) && ip_addr_cmp(&oldipaddr,&ipaddr) == 0)
-        {
-                printf(" * taking network down to set config values\n");
-                setnetconfig = 1;
-                netif_set_down(&netif);
+	if(conf.ipaddress != NULL)
+        	if (ipaddr_aton(conf.ipaddress,&ipaddr) && ip_addr_cmp(&oldipaddr,&ipaddr) == 0)
+        	{
+        	        printf(" * taking network down to set config values\n");
+        	        setnetconfig = 1;
+        	        netif_set_down(&netif);
                 
-                netif_set_ipaddr(&netif,&ipaddr);
-                ip_addr_set(&oldipaddr,&ipaddr);
-        }
+        	        netif_set_ipaddr(&netif,&ipaddr);
+        	        ip_addr_set(&oldipaddr,&ipaddr);
+        	}
 
-        if (ipaddr_aton(conf.netmask,&netmask) && setnetconfig){
-                netif_set_netmask(&netif,&netmask);
-                ip_addr_set(&oldnetmask,&netmask);
-        }
+	if(conf.netmask != NULL)
+        	if (ipaddr_aton(conf.netmask,&netmask) && setnetconfig){
+        	        netif_set_netmask(&netif,&netmask);
+        	        ip_addr_set(&oldnetmask,&netmask);
+        	}
         
-        if (ipaddr_aton(conf.gateway,&gateway) && setnetconfig){
-                netif_set_gw(&netif,&gateway);
-                ip_addr_set(&oldgateway,&gateway); 
-        }
+	if(conf.gateway != NULL)
+        	if (ipaddr_aton(conf.gateway,&gateway) && setnetconfig){
+        	        netif_set_gw(&netif,&gateway);
+        	        ip_addr_set(&oldgateway,&gateway); 
+        	}
         
         if (setnetconfig){
            printf(" * bringing network back up...\n");
