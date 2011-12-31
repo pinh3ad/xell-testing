@@ -138,6 +138,7 @@ int kbootconf_parse(void)
 
 	conf.timeout = -1;
         conf.videomode = -1;
+	conf.speedup = 0;
 
 	while(*lp) {
 		char *newline = strchr(lp, '\n');
