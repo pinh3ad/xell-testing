@@ -299,6 +299,14 @@ int main(){
 		try_load_elf("dvd:/xenon.z");
 		try_load_elf("dvd:/vmlinux"); 
 
+		// try Hard Drive
+                updateXeLL("sda:/updxell.bin");
+                try_load_elf("sda:/kboot.conf");
+                try_load_elf("sda:/initrd.gz");
+		try_load_elf("sda:/xenon.elf");
+		try_load_elf("sda:/xenon.z");
+		try_load_elf("sda:/vmlinux");
+
 		//subsystem servicing
 		usb_do_poll();
 		network_poll();
