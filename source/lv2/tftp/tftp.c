@@ -161,7 +161,7 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 	
 	send = 1;
 	
-	maxtries = 1;
+	maxtries = 10;
 	tries = 0;
 
 	while (tftp_state != TFTP_STATE_FINISH)
