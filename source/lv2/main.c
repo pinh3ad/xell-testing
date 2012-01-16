@@ -116,7 +116,7 @@ void launch_elf(void * addr, unsigned len){
 	//Check elf header
 	if (!memcmp(addr, elfhdr, 4))
 	{
-		printf(" * Executing...\n");
+		printf(" * Found ELF...\n");
 		elf_runWithDeviceTree(addr,len,dt_blob_start,dt_blob_end-dt_blob_start);
 	}
 	//Check kbootconf header
@@ -129,10 +129,10 @@ void launch_elf(void * addr, unsigned len){
         else if (!memcmp(addr,cpiohdr,4)||initrd_found)
         {
                 printf(" * Found initrd/cpio file ...\n");
-                kernel_set_initrd(addr,len);
+                kernel_prepare_initrd(addr,len);
         }
         else
-                printf(" * Bad header!\n");
+                printf(" ! Bad header!");
 }
 
 int try_load_elf(char *filename)
@@ -281,7 +281,6 @@ int main(){
 		// try USB
                 updateXeLL("uda:/updxell.bin");
                 try_load_elf("uda:/kboot.conf");
-                try_load_elf("uda:/initrd.gz");
 		try_load_elf("uda:/xenon.elf");
 		try_load_elf("uda:/xenon.z");
 		try_load_elf("uda:/vmlinux");
@@ -294,7 +293,6 @@ int main(){
 		// try CD/DVD
                 updateXeLL("dvd:/updxell.bin");
                 try_load_elf("dvd:/kboot.conf");
-                try_load_elf("dvd:/initrd.gz");
 		try_load_elf("dvd:/xenon.elf");
 		try_load_elf("dvd:/xenon.z");
 		try_load_elf("dvd:/vmlinux"); 
@@ -302,7 +300,6 @@ int main(){
 		// try Hard Drive
                 updateXeLL("sda:/updxell.bin");
                 try_load_elf("sda:/kboot.conf");
-                try_load_elf("sda:/initrd.gz");
 		try_load_elf("sda:/xenon.elf");
 		try_load_elf("sda:/xenon.z");
 		try_load_elf("sda:/vmlinux");
