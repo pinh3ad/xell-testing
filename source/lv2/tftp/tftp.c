@@ -171,7 +171,7 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 		if (tb_diff_msec(now, start) > 500)
 		{
 			if (tftp_state == TFTP_STATE_RRQ_SEND)
-				printf("TFTP: no answer from server");
+				tries == 0 ? printf("no answer from server"):printf(".");
 			else
 			{
 				if (!current_block)
