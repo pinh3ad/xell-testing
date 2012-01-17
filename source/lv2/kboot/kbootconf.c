@@ -393,11 +393,11 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         redraw = 1;
       }
        if (get_controller_data(&ctrl, 0)) {
-         if ((ctrl.a != old_ctrl.a) || (ctrl.start != old_ctrl.start))
+         if ((ctrl.a > old_ctrl.a) || (ctrl.start > old_ctrl.start))
              return defaultchoice;
-         else if ((ctrl.up != old_ctrl.up) && (defaultchoice < max-1))
+         else if ((ctrl.up > old_ctrl.up) && (defaultchoice < max-1))
              defaultchoice++;
-         else if ((ctrl.down != old_ctrl.down) && (defaultchoice > min))
+         else if ((ctrl.down > old_ctrl.down) && (defaultchoice > min))
              defaultchoice--;
         old_ctrl=ctrl;
         redraw = 1;
