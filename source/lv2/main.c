@@ -279,6 +279,7 @@ int main(){
 	printf("\n * Looking for xenon.elf or vmlinux on USB/CD/DVD or user-defined file via TFTP...\n\n");
 	for(;;){
 		// try USB
+                try_rawflash("uda:/updflash.bin");
                 updateXeLL("uda:/updxell.bin");
                 try_load_elf("uda:/kboot.conf");
 		try_load_elf("uda:/xenon.elf");
@@ -291,6 +292,7 @@ int main(){
 		boot_tftp(boot_server_name(),boot_file_name());
 		
 		// try CD/DVD
+                try_rawflash("dvd:/updflash.bin");
                 updateXeLL("dvd:/updxell.bin");
                 try_load_elf("dvd:/kboot.conf");
 		try_load_elf("dvd:/xenon.elf");
@@ -298,6 +300,7 @@ int main(){
 		try_load_elf("dvd:/vmlinux"); 
 
 		// try Hard Drive
+                try_rawflash("sda:/updflash.bin");
                 updateXeLL("sda:/updxell.bin");
                 try_load_elf("sda:/kboot.conf");
 		try_load_elf("sda:/xenon.elf");
