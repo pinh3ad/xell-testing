@@ -373,7 +373,9 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         else if(ch == IR_DOWN && (defaultchoice > min))
                 defaultchoice--;
         else if(ch == IR_OK)
-                return defaultchoice;    
+                return defaultchoice;
+        else if(ch == IR_BTN_B)
+                return -1;  
         redraw = 1;   
       }
 
@@ -385,16 +387,20 @@ int user_prompt(int defaultchoice, int max, int timeout) {
 	  return defaultchoice;
         else if (num >= min && num <= max-1)
           return num;
-        else if (ch == 0x41 && (defaultchoice < max-1))
+        else if (ch == 0x41 && (defaultchoice < max-1)) // UP
           defaultchoice++;
-        else if(ch == 0x42 && (defaultchoice > min))
+        else if(ch == 0x42 && (defaultchoice > min)) // DOWN
           defaultchoice--;
+        else if(ch == 0x1B) // ESC
+          return -1;
         
         redraw = 1;
       }
        if (get_controller_data(&ctrl, 0)) {
          if ((ctrl.a > old_ctrl.a) || (ctrl.start > old_ctrl.start))
              return defaultchoice;
+         else if ((ctrl.b > old_ctrl.b) || (ctrl.select > old_ctrl.select))
+             return -1;
          else if ((ctrl.up > old_ctrl.up) && (defaultchoice < max-1))
              defaultchoice++;
          else if ((ctrl.down > old_ctrl.down) && (defaultchoice > min))
@@ -414,6 +420,14 @@ return defaultchoice;
 }
 
 void try_kbootconf(void * addr, unsigned len){
+    
+    if (len > MAX_KBOOTCONF_SIZE)
+    {
+        printf(" ! file is bigger than %u bytes\n",len);
+        printf(" ! Aborting\n");
+        return;
+    }
+    
     memcpy(conf_buf,addr,len);
     conf_buf[len] = 0; //ensure null-termination
     
@@ -422,7 +436,6 @@ void try_kbootconf(void * addr, unsigned len){
     
     if (conf.num_kernels == 0){
        printf(" ! No kernels found in kboot.conf !\n");
-       printf(" ! Aborting\n");
        return;
     }
     
@@ -435,6 +448,11 @@ void try_kbootconf(void * addr, unsigned len){
     }
     boot_entry = user_prompt(conf.default_idx, conf.num_kernels,conf.timeout);
     
+    if (boot_entry < 0)
+    {
+        printf("\rAborted by user!\n");
+        return;
+    }
     printf("\nYou chose: %i\n",boot_entry);
     
     if (conf.kernels[boot_entry].parameters)
@@ -455,4 +473,5 @@ void try_kbootconf(void * addr, unsigned len){
     conf.num_kernels = 0;
     conf.timeout = 0;
     conf.default_idx = 0;
+    conf.speedup = 0;
 }

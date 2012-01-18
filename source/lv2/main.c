@@ -67,7 +67,7 @@ void wait_and_cleanup_line()
 
 char *boot_server_name()
 {       
-    if (kboot_tftp && kboot_tftp[0])
+        if (kboot_tftp && kboot_tftp[0])
         return kboot_tftp;
             
 	if (netif.dhcp && netif.dhcp->boot_server_name[0])
