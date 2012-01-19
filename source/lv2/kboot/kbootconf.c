@@ -391,7 +391,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
           defaultchoice++;
         else if(ch == 0x42 && (defaultchoice > min)) // DOWN
           defaultchoice--;
-        else if(ch == 0x1B) // ESC
+        else if(ch == 0x63) // C - (c)ancel
           return -1;
         
         redraw = 1;
