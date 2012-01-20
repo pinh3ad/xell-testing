@@ -61,8 +61,8 @@ static void tftp_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_
 			current_block++;
 			
 			if (!(current_block & 255))
-				printf("%c\r", "|/-\\"[(current_block>>8)&3]);
-			
+				printf("%c                                                                       \r", "|/-\\"[(current_block>>8)&3]);
+
 			ptr += pl;
 			if (pl < last_size)
 			{
@@ -220,7 +220,7 @@ int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
 				d += 6;
 				
 				if (udp_sendto(pcb, p, &server, 69))
-					printf("TFTP: packet send error.");
+					tries == 0?printf("TFTP: packet send error."):printf(".");
 				pbuf_free(p);
 				send = 0;
 				break;
