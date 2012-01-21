@@ -5,6 +5,7 @@ used for zlib support ...
 #include <assert.h>
 #include <string.h>
 
+#include "config.h"
 #include "zlib.h"
 
 #define CHUNK 16384
@@ -52,6 +53,8 @@ int inflate_read(char *source,int len,char **dest,int * destsize, int gzip) {
 		}
 		have = CHUNK - strm.avail_out;
 		totalsize += have;
+                if (totalsize > ELF_MAXSIZE)
+                    return Z_BUF_ERROR;
 		//*dest = (char*)realloc(*dest,totalsize);
 		memcpy(*dest + totalsize - have,out,have);
 		*destsize = totalsize;
