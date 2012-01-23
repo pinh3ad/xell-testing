@@ -24,9 +24,12 @@ XeLL-Reloaded catches CPU threads, sets them up, loads an ELF file from either n
 * Supports upgrading with a 2-stage XeLL-Reloaded binary, named "updxell.bin"
 * Infinite boot loop when looking for ELFs to execute.(no more rushing to get the live-cd in)
 * Parses / decrypts keyvault
-* Supports kboot.conf-type file (from marcan for AsbestOS), XeLL Menu branch (from Ge0rg's XeLL-Menu branch)
+* Supports kboot.conf-type file
 * Supports external initramfs
 * Can pass a custom CMDLINE to linux kernel via kboot.conf
+  kboot.conf/initrd support - copyright (C) 2010-2011  Hector Martin "marcan" <hector@marcansoft.com>
+* Shows a user controllable menu for the parsed bootentries 
+  xell user prompt - by Georg Lukas "Ge0rg" <georg@op-co.de>
 
   HOW TO USE
 ==============
@@ -58,8 +61,6 @@ kboot.conf (modified for XeLL) is a configfile (sample config included in releas
 initrd.gz can be either gzipped or bare cpio binary. If you want to load linux you can load initrd.gz before and it gets passed to linux devtree.
 
 xenon.elf/xenon.z/vmlinux can be either gzipped or bare ELF32 binaries - LINUX or Homebrew
-
-
 
 There's also a HTTP Server running while XeLL searches for executable binaries.
 It can serve the CPUKey/DVDKey and the console's flashdump.

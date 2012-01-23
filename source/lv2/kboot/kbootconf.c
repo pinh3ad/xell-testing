@@ -30,8 +30,10 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 int boot_entry;
 char conf_buf[MAX_KBOOTCONF_SIZE];
 struct kbootconf conf;
+
 ip_addr_t oldipaddr, oldnetmask, oldgateway;
 char *kboot_tftp;
+
 enum ir_remote_codes IR;
 static struct controller_data_s ctrl;
 static struct controller_data_s old_ctrl;
@@ -326,6 +328,14 @@ nextline:
 	return conf.num_kernels;
 }
 
+/** @brief presents a prompt on screen and waits until a choice is taken
+*
+* @param defaultchoice what to return on timeout
+* @param max maximum allowed choice
+* @param timeout number of seconds to wait
+*
+* @return choice (0 <= choice <= max)
+*/
 int user_prompt(int defaultchoice, int max, int timeout) {
    int redraw = 1;
    int min = 0;
