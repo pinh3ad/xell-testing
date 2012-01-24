@@ -94,12 +94,12 @@ void launch_elf(void * addr, unsigned len){
 	if((gzip_file[0]==0x1F)&&(gzip_file[1]==0x8B)){
 		//found a gzip file
 		printf(" * Found a gzip file...\n");
-		char * dest = malloc(ELF_MAXSIZE);
-		int destsize = 0;
 		if(inflate_compare_header((char*)addr, len, cpiohdr, 4, 1) == 0){
 			gzipped_initrd = 1;
 			goto check_hdr;
 		}
+		char * dest = malloc(ELF_MAXSIZE);
+		int destsize = 0;
 		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0) {
 			//relocate elf ...
 			memcpy(addr,dest,destsize);
