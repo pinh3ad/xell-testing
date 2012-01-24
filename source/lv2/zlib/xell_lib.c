@@ -64,3 +64,49 @@ int inflate_read(char *source,int len,char **dest,int * destsize, int gzip) {
 	(void)inflateEnd(&strm);
 	return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
 }
+
+int inflate_compare_header(char *source,int len,char *header, int header_sz, int gzip) {
+	int ret;
+	unsigned have;
+	z_stream strm;
+	unsigned char out[CHUNK];
+
+	/* allocate inflate state */
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+	strm.avail_in = 0;
+	strm.next_in = Z_NULL;
+	
+	if(gzip)
+		ret = inflateInit2(&strm, 16+MAX_WBITS);
+	else
+		ret = inflateInit(&strm);
+		
+	if (ret != Z_OK)
+		return ret;
+
+	strm.avail_in = len;
+	strm.next_in = (Bytef*)source;
+
+	/* run inflate() only for one chunk */
+	strm.avail_out = CHUNK;
+	strm.next_out = (Bytef*)out;
+	ret = inflate(&strm, Z_NO_FLUSH);
+	assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+	switch (ret) {
+	case Z_NEED_DICT:
+		ret = Z_DATA_ERROR;     /* and fall through */
+	case Z_DATA_ERROR:
+	case Z_MEM_ERROR:
+		inflateEnd(&strm);
+		return ret;
+	}
+	have = CHUNK - strm.avail_out;
+
+        ret = memcmp(out,header,header_sz);
+                
+	/* clean up and return */
+	(void)inflateEnd(&strm);
+        return ret;
+}

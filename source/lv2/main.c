@@ -88,7 +88,7 @@ char *boot_file_name()
 }
 
 void launch_elf(void * addr, unsigned len){
-	int initrd_found = 0;
+        int gzipped_initrd = 0;
 	//check if addr point to a gzip file
 	unsigned char * gzip_file = (unsigned char *)addr;
 	if((gzip_file[0]==0x1F)&&(gzip_file[1]==0x8B)){
@@ -96,16 +96,16 @@ void launch_elf(void * addr, unsigned len){
 		printf(" * Found a gzip file...\n");
 		char * dest = malloc(ELF_MAXSIZE);
 		int destsize = 0;
-		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0){
+		if(inflate_compare_header((char*)addr, len, cpiohdr, 4, 1) == 0){
+			gzipped_initrd = 1;
+			goto check_hdr;
+		}
+		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0) {
 			//relocate elf ...
-                        if(!memcmp(dest,cpiohdr,4))
-                                initrd_found = 1;
-                        else /* Dont overwrite sourcefile if unpacked file is cpio/initrd */
-				memcpy(addr,dest,destsize);
+			memcpy(addr,dest,destsize);
 			printf(" * Successfully unpacked...\n");
 			free(dest);
-			if(!initrd_found)
-				len=destsize;
+			len=destsize;
 		}
 		else{
 			printf(" * Unpacking failed...\n");
@@ -113,6 +113,8 @@ void launch_elf(void * addr, unsigned len){
 			return;
 		}
 	}
+        
+check_hdr:
 	//Check elf header
 	if (!memcmp(addr, elfhdr, 4))
 	{
@@ -126,7 +128,7 @@ void launch_elf(void * addr, unsigned len){
                 try_kbootconf(addr,len);
         }
 	//Check cpio header or initrd_found flag
-        else if (!memcmp(addr,cpiohdr,4)||initrd_found)
+        else if (!memcmp(addr,cpiohdr,4) || gzipped_initrd == 1)
         {
                 printf(" * Found initrd/cpio file ...\n");
                 kernel_prepare_initrd(addr,len);
