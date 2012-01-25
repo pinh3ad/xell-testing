@@ -95,7 +95,7 @@ XBox does not boot properly after flashing the NAND: Either your image wasn't pr
 
 1. Read and understand the kboot.conf.sample which is part of every XeLL release with kboot-support
 2. Modify the file to your needs
-3. Copy it to a CD/FAT32 USB Stick/FAT32 HDD or supply it via TFTP
+3. Copy it, named as "kboot.conf, to a CD/FAT32 USB Stick/FAT32 HDD or supply it via TFTP
 4. Boot XeLL and wait till it loads the file and shows the menu
 5. Navigate to the desired bootentry. You can do this in the following ways:
 	UART:	
