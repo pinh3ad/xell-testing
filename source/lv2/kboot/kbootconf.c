@@ -343,7 +343,6 @@ int user_prompt(int defaultchoice, int max, int timeout) {
    int timeout_disabled = 0;
    int old_default = defaultchoice;
    uint64_t start;
-   int c;
    
     start = mftb();
     delta = 0;
