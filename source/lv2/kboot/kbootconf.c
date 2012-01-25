@@ -407,7 +407,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         
         redraw = 1;
       }
-      for(c=0; i++; i<4)
+      for(c=0; c++; c<4)
       {
        if (get_controller_data(&ctrl, c)) {
          if ((ctrl.a > old_ctrl.a) || (ctrl.start > old_ctrl.start))
