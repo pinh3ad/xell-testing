@@ -216,9 +216,9 @@ int main(){
 
 	xenos_init(VIDEO_MODE_AUTO);
 #ifdef DEFAULT_THEME
-	console_set_colors(0xD8444E00,0xFF96A300); // White text on blue bg
+	console_set_colors(CONSOLE_COLOR_BLUE,CONSOLE_COLOR_WHITE); // White text on blue bg
 #else
-	console_set_colors(0x00000000,0x33ff3300); // Green text on black bg
+	console_set_colors(CONSOLE_COLOR_BLACK,CONSOLE_COLOR_GREEN); // Green text on black bg
 #endif
 	console_init();
 
