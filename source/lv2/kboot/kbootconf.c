@@ -343,6 +343,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
    int timeout_disabled = 0;
    int old_default = defaultchoice;
    uint64_t start;
+   int c;
    
     start = mftb();
     delta = 0;
@@ -406,7 +407,9 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         
         redraw = 1;
       }
-       if (get_controller_data(&ctrl, 0)) {
+      for(c=0; i++; i<4)
+      {
+       if (get_controller_data(&ctrl, c)) {
          if ((ctrl.a > old_ctrl.a) || (ctrl.start > old_ctrl.start))
              return defaultchoice;
          else if ((ctrl.b > old_ctrl.b) || (ctrl.select > old_ctrl.select))
@@ -417,7 +420,8 @@ int user_prompt(int defaultchoice, int max, int timeout) {
              defaultchoice--;
         old_ctrl=ctrl;
         redraw = 1;
-       }
+        }
+      }
 
     network_poll();
     usb_do_poll();
