@@ -34,17 +34,16 @@ XeLL-Reloaded catches CPU threads, sets them up, loads an ELF file from either n
   HOW TO USE
 ==============
 
-XeLL Reloaded checks for *.elf(homebrew/linux elf32)/kboot.conf/initrd/updxell.bin or updflash.bin in the following order:
+XeLL Reloaded checks for *.elf(homebrew/linux elf32)/kboot.conf/updxell.bin or updflash.bin in the following order:
 
 USB (FAT):	updflash.bin
 		updxell.bin
 		kboot.conf
-		initrd.gz
 		xenon.elf
 		xenon.z
 		vmlinux
 Network: 	DHCP supplied bootserver and bootfile-name. You can supply a static tftpserver ip via kboot.conf. If no tftpserver is found, it falls back to a static ip.
-		( no updxell support via tftp)
+		( no updxell or updflash support via tftp)
 DVD (ISO9660):	*same as USB*	
 HDD (FAT):	*same as USB*
 
@@ -58,9 +57,62 @@ kboot.conf (modified for XeLL) is a configfile (sample config included in releas
 	Menu: Parses bootentries, shows a user controlable menu with XboxController/UART/IR Remote
 	      It can parse bootarguments for linux kernels & can load initramfs/initrd 
 
-initrd.gz can be either gzipped or bare cpio binary. If you want to load linux you can load initrd.gz before and it gets passed to linux devtree.
-
 xenon.elf/xenon.z/vmlinux can be either gzipped or bare ELF32 binaries - LINUX or Homebrew
 
 There's also a HTTP Server running while XeLL searches for executable binaries.
 It can serve the CPUKey/DVDKey and the console's flashdump.
+
+
+  UPDATING XELL
+=================
+
+1. Rename the appropriate XeLL-binary to "updxell.bin". 
+2. Copy the updxell.bin file to the root of the FAT/FAT32 USB Stick or burn a ISO9660 CD
+3. Plug in the USB Stick/CD and boot up XeLL. It should find the update and flash it
+4. Reboot your Xbox and enjoy the fresh XeLL build
+
+Troubleshooting:
+
+updxell.bin doesn't get found / updxell process doesn't start: You have to rebuild your whole hackimage with a recent XeLL. From there on you can use the inbuilt update feature
+updxell function reports that no XeLL binary was found in NAND: Either your XeLL in NAND is too old or it's not a XeLL Reloaded binary - You have to rebuild your whole hackimage with a recent XeLL.
+
+
+  FLASHING NAND
+=================
+
+1. Rename the new (already remapped) flashimage to "updflash.bin"
+2. Copy the updflash.bin file to the root of the FAT/FAT32 USB Stick or burn a ISO9660 CD
+3. Plug in the USB Stick/CD and boot up XeLL. It should find the update and flash it
+4. Reboot your Xbox and enjoy the new image
+
+Troubleshooting:
+
+XBox does not boot properly after flashing the NAND: Either your image wasn't properly remapped or you made something wrong while building the image
+
+
+  USING KBOOT.CONF
+===================
+
+1. Read and understand the kboot.conf.sample which is part of every XeLL release with kboot-support
+2. Modify the file to your needs
+3. Copy it to a CD/FAT32 USB Stick/FAT32 HDD or supply it via TFTP
+4. Boot XeLL and wait till it loads the file and shows the menu
+5. Navigate to the desired bootentry. You can do this in the following ways:
+	UART:	
+	UP/DOWN to go up and down in the menu
+	ENTER to confirm your choice
+	Press the NUMBER of the desired bootentry to directly load it
+	C to cancel the menu
+
+	X360 Controller (1st):
+	DPAD-UP/DPAD-DOWN to go up and down in the menu
+	A to confirm your choice
+	B to cancel the menu
+
+	X360 Media Remote:
+	UP/DOWN to go up and down in the menu
+	OK to confirm your choice
+	Press the NUMBER of the desired bootentry to directly load it
+	B to cancel the menu
+
+6. Let the bootentry load. Enjoy :)
