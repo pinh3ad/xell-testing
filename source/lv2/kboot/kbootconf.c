@@ -407,9 +407,8 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         
         redraw = 1;
       }
-      for(c=0; c++; c<4)
-      {
-       if (get_controller_data(&ctrl, c)) {
+
+       if (get_controller_data(&ctrl, 0)) {
          if ((ctrl.a > old_ctrl.a) || (ctrl.start > old_ctrl.start))
              return defaultchoice;
          else if ((ctrl.b > old_ctrl.b) || (ctrl.select > old_ctrl.select))
@@ -421,7 +420,6 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         old_ctrl=ctrl;
         redraw = 1;
         }
-      }
 
     network_poll();
     usb_do_poll();
