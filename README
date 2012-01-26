@@ -2,8 +2,17 @@ XeLL-Reloaded
 
 A Xenon Linux loader based on Xell by tmbinc(Felix Domke)
 
-Contributed to by
-[cOz] Cancerous1 Ced2911 GliGli Redline99 Tuxuser ... and you?
+Contributed to by:
+[cOz]
+Cancerous1
+Ced2911
+GliGli
+Juvenal
+Natelx
+Redline99
+sk1080
+Tuxuser
+... and you?
 
 XeLL-Reloaded catches CPU threads, sets them up, loads an ELF file from either network (tftp), USB(fat), CDROM (ISO9660) or HDD(fat), and launches it. It's made to boot Linux, so it contains a flat device tree for Linux. However, it is able to load other ELF files as well, like applications based on LibXenon.
 
@@ -116,3 +125,9 @@ XBox does not boot properly after flashing the NAND: Either your image wasn't pr
 	B to cancel the menu
 
 6. Let the bootentry load. Enjoy :)
+
+Troubleshooting:
+
+kboot.conf gets found but it doesn't show bootentries or autoloads a bootentry:
+Make sure timeout is set to something higher than 0
+Make sure you didn't forget the "" on the bootentry: label="kernelpath"

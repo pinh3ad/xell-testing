@@ -1,0 +1,16 @@
+ToDo
+=====
+
+* Check if USB Loading works if USB Media is attached while running filesearch-loop
+* Check if CD/DVD Loading works at all / in filesearch-loop
+* Check if consolelines overflow when doin TFTP (even without networkcable attached) on SDTV
+* Check if internal bootargs of linux kernel work: If a kboot-entry was tried to load - with arguments - but failed, so that another ELF with internal args is booted
+
+
+* Fix ISO9660 - Joilet CD/DVD Loading (for example Ubuntu 10.10 LiveCD beta 5)
+* Fix network init - it freezes for some poeple ALWAYS at "Reinit PHYS.."
+* Fix EHCI Init - freezes for some people ALWAYS after EHCI Init
+
+
+
+to be continued...
