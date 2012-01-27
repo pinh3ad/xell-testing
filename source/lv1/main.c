@@ -357,7 +357,7 @@ int start(int pir, unsigned long hrmor, unsigned long pvr)
 		int i;
 		for(i=0;i<6;i++){
 			std(irq_cntrl + i*0x1000 + 0x70, 0x7c);
-			std(irq_cntrl + i*0x1000 + 8, 0x7c);
+			std(irq_cntrl + i*0x1000 + 8, 0x0);
 			std(irq_cntrl + i*0x1000, 1<<i); 
 		}
  
