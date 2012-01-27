@@ -67,7 +67,7 @@ void wait_and_cleanup_line()
 
 char *boot_server_name()
 {       
-    if (kboot_tftp && kboot_tftp[0])
+        if (kboot_tftp && kboot_tftp[0])
         return kboot_tftp;
             
 	if (netif.dhcp && netif.dhcp->boot_server_name[0])
@@ -88,26 +88,33 @@ char *boot_file_name()
 }
 
 void launch_elf(void * addr, unsigned len){
-	int initrd_found = 0;
+        int gzipped_initrd = 0;
 	//check if addr point to a gzip file
 	unsigned char * gzip_file = (unsigned char *)addr;
 	if((gzip_file[0]==0x1F)&&(gzip_file[1]==0x8B)){
 		//found a gzip file
 		printf(" * Found a gzip file...\n");
+		if(inflate_compare_header((char*)addr, len, cpiohdr, 4, 1) == 0){
+			gzipped_initrd = 1;
+			goto check_hdr;
+		}
 		char * dest = malloc(ELF_MAXSIZE);
 		int destsize = 0;
-		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0){
+		if(inflate_read((char*)addr, len, &dest, &destsize, 1) == 0) {
 			//relocate elf ...
+<<<<<<< HEAD
 
                         if(!memcmp(dest,cpiohdr,4))
                                 initrd_found = 1;
                         else /* Dont overwrite sourcefile if unpacked file is cpio/initrd */
 				memcpy(addr,dest,destsize);
 
+=======
+			memcpy(addr,dest,destsize);
+>>>>>>> upstream/2stages
 			printf(" * Successfully unpacked...\n");
 			free(dest);
-			if(!initrd_found)
-				len=destsize;
+			len=destsize;
 		}
 		else{
 			printf(" * Unpacking failed...\n");
@@ -115,10 +122,12 @@ void launch_elf(void * addr, unsigned len){
 			return;
 		}
 	}
+        
+check_hdr:
 	//Check elf header
 	if (!memcmp(addr, elfhdr, 4))
 	{
-		printf(" * Executing...\n");
+		printf(" * Found ELF...\n");
 		elf_runWithDeviceTree(addr,len,dt_blob_start,dt_blob_end-dt_blob_start);
 	}
 	//Check kbootconf header
@@ -128,13 +137,13 @@ void launch_elf(void * addr, unsigned len){
                 try_kbootconf(addr,len);
         }
 	//Check cpio header or initrd_found flag
-        else if (!memcmp(addr,cpiohdr,4)||initrd_found)
+        else if (!memcmp(addr,cpiohdr,4) || gzipped_initrd == 1)
         {
                 printf(" * Found initrd/cpio file ...\n");
-                kernel_set_initrd(addr,len);
+                kernel_prepare_initrd(addr,len);
         }
         else
-                printf(" * Bad header!\n");
+                printf(" ! Bad header!");
 }
 
 int try_load_elf(char *filename)
@@ -216,9 +225,9 @@ int main(){
 
 	xenos_init(VIDEO_MODE_AUTO);
 #ifdef DEFAULT_THEME
-	console_set_colors(0xD8444E00,0xFF96A300); // White text on blue bg
+	console_set_colors(CONSOLE_COLOR_BLUE,CONSOLE_COLOR_WHITE); // White text on blue bg
 #else
-	console_set_colors(0x00000000,0x33ff3300); // Green text on black bg
+	console_set_colors(CONSOLE_COLOR_BLACK,CONSOLE_COLOR_GREEN); // Green text on black bg
 #endif
 	console_init();
 
@@ -281,9 +290,9 @@ int main(){
 	printf("\n * Looking for xenon.elf or vmlinux on USB/CD/DVD or user-defined file via TFTP...\n\n");
 	for(;;){
 		// try USB
+                try_rawflash("uda:/updflash.bin");
                 updateXeLL("uda:/updxell.bin");
                 try_load_elf("uda:/kboot.conf");
-                try_load_elf("uda:/initrd.gz");
 		try_load_elf("uda:/xenon.elf");
 		try_load_elf("uda:/xenon.z");
 		try_load_elf("uda:/vmlinux");
@@ -294,17 +303,17 @@ int main(){
 		boot_tftp(boot_server_name(),boot_file_name());
 		
 		// try CD/DVD
+                try_rawflash("dvd:/updflash.bin");
                 updateXeLL("dvd:/updxell.bin");
                 try_load_elf("dvd:/kboot.conf");
-                try_load_elf("dvd:/initrd.gz");
 		try_load_elf("dvd:/xenon.elf");
 		try_load_elf("dvd:/xenon.z");
 		try_load_elf("dvd:/vmlinux"); 
 
 		// try Hard Drive
+                try_rawflash("sda:/updflash.bin");
                 updateXeLL("sda:/updxell.bin");
                 try_load_elf("sda:/kboot.conf");
-                try_load_elf("sda:/initrd.gz");
 		try_load_elf("sda:/xenon.elf");
 		try_load_elf("sda:/xenon.z");
 		try_load_elf("sda:/vmlinux");
