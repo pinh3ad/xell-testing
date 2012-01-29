@@ -15,6 +15,7 @@
 #include <xenon_nand/xenon_config.h>
 #include <xenon_soc/xenon_secotp.h>
 #include <xenon_soc/xenon_io.h>
+#include <xenon_soc/xenon_power.h>
 #include <xenon_sound/sound.h>
 #include <xenon_smc/xenon_smc.h>
 #include <xenon_smc/xenon_gpio.h>
@@ -23,6 +24,7 @@
 #include <httpd/httpd.h>
 #include <diskio/ata.h>
 #include <elf/elf.h>
+#include <threads/threads.h>
 #include <version.h>
 #include <byteswap.h>
 
@@ -119,6 +121,8 @@ check_hdr:
 	if (!memcmp(addr, elfhdr, 4))
 	{
 		printf(" * Found ELF...\n");
+		printf(" * Shutting down threads...\n");
+		threading_shutdown();
 		elf_runWithDeviceTree(addr,len,dt_blob_start,dt_blob_end-dt_blob_start);
 	}
 	//Check kbootconf header
@@ -230,6 +234,8 @@ int main(){
 	
 	xenon_sound_init();
 
+	xenon_make_it_faster(XENON_SPEED_FULL);
+
 	printf(" * nand init\n");
 	sfcx_init();
 	if (sfc.initialized != SFCX_INITIALIZED)
@@ -240,13 +246,6 @@ int main(){
 	}
 	xenon_config_init();
 
-	printf(" * network init\n");
-	network_init();
-
-	printf(" * starting httpd server...");
-	httpd_start();
-	printf("success\n");
-
 	printf(" * usb init\n");
 	usb_init();
 	usb_do_poll();
@@ -256,6 +255,16 @@ int main(){
 
 	printf(" * sata dvd init\n");
 	xenon_atapi_init();
+
+	printf(" * threading init\n");
+	threading_init();
+
+	printf(" * network init\n");
+	network_init();
+
+	printf(" * starting httpd server...");
+	httpd_start();
+	printf("success\n");
 
 	/* display some cpu info */
 	printf(" * CPU PVR: %08x\n", mfspr(287));
@@ -276,6 +285,7 @@ int main(){
 	printf(FUSES);
 
 	print_cpu_dvd_keys();
+
 	network_print_config();
 #endif
 	printf("\n * Looking for xenon.elf or vmlinux on USB/CD/DVD or user-defined file via TFTP...\n\n");

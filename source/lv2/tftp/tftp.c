@@ -1,267 +1,104 @@
 #include <stdlib.h>
 #include <xetypes.h>
 
-#include <lwip/mem.h>
-#include <lwip/memp.h>
-#include <lwip/sys.h>
+#include <lwip/sockets.h>
 
-#include <lwip/stats.h>
-
-#include <lwip/inet.h>
-#include <lwip/ip.h>
-#include <lwip/udp.h>
-#include <lwip/tcp.h>
-#include <lwip/dhcp.h>
-#include <netif/etharp.h>
-
-#include <ppc/timebase.h>
 #include <network/network.h>
 #include "config.h"
 
-#define TFTP_STATE_RRQ_SEND 0
-#define TFTP_STATE_ACK_SEND 1
-#define TFTP_STATE_FINISH   2
-
-#define TFTP_OPCODE_RRQ   1
-#define TFTP_OPCODE_WRQ   2
-#define TFTP_OPCODE_DATA  3
-#define TFTP_OPCODE_ACK   4
-#define TFTP_OPCODE_ERROR 5
-
-static int tftp_state, tftp_result;
-static int maxtries, tries, current_block;
-static int send, last_size, ptr;
-static uint64_t ts, start;
-static unsigned char *base;
-static int image_maxlen;
-
-
 extern void launch_elf(void * addr, unsigned len);
 
-static void tftp_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_addr *addr, u16_t port)
-{
-	unsigned char *d = p->payload;
-	if (p->tot_len < 2)
-	{
-		tftp_state = TFTP_STATE_FINISH;
-		tftp_result = -1;
-	}	
-	start=mftb();
-	
-	switch ((d[0] << 8) | d[1])
-	{
-	case 3: // DATA
-	{
-		int this_block = (d[2] << 8) | d[3];
-		int pl = p->tot_len - 4;
-		if (this_block == current_block + 1)
-		{
-			if ((ptr + pl) <= image_maxlen)
-				memcpy(base + ptr, d + 4, pl);
-			current_block++;
-			
-			if (!(current_block & 255))
-				printf("%c                                                                       \r", "|/-\\"[(current_block>>8)&3]);
+#define TFTP_PORT	69
+/* opcode */
+#define TFTP_RRQ			1 	/* read request */
+#define TFTP_WRQ			2	/* write request */
+#define TFTP_DATA			3	/* data */
+#define TFTP_ACK			4	/* ACK */
+#define TFTP_ERROR			5	/* error */
 
-			ptr += pl;
-			if (pl < last_size)
-			{
-				tftp_result = 0;
-			 	tftp_state = TFTP_STATE_FINISH;
-			 	break;
-			}
-		} else
+char tftp_buffer[512 + 4];
+int do_tftp(void * buffer, int maxlen, const char* host, const char* filename)
+{
+	int loc = 0;
+	int sock_fd, sock_opt;
+	struct sockaddr_in tftp_addr, from_addr;
+	unsigned int length;
+	socklen_t fromlen;
+
+	/* connect to tftp server */
+	inet_aton(host, (struct in_addr*)&(tftp_addr.sin_addr));
+	tftp_addr.sin_family = AF_INET;
+	tftp_addr.sin_port = TFTP_PORT;
+    
+	sock_fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+	if (sock_fd < 0)
+	{
+	    printf("can't create a socket\n");
+	    return -1;
+	}
+	
+	/* set socket option */
+	sock_opt = 5000; /* 5 seconds */
+	lwip_setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_opt, sizeof(sock_opt));
+
+	/* make tftp request */
+	tftp_buffer[0] = 0;			/* opcode */
+	tftp_buffer[1] = TFTP_RRQ; 	/* RRQ */
+	length = sprintf((char *)&tftp_buffer[2], "%s", filename) + 2;
+	tftp_buffer[length] = 0; length ++;
+	length += sprintf((char*)&tftp_buffer[length], "%s", "octet");
+	tftp_buffer[length] = 0; length ++;
+
+	fromlen = sizeof(struct sockaddr_in);
+	
+	/* send request */	
+	lwip_sendto(sock_fd, tftp_buffer, length, 0, 
+		(struct sockaddr *)&tftp_addr, fromlen);
+	
+	do
+	{
+		length = lwip_recvfrom(sock_fd, tftp_buffer, sizeof(tftp_buffer), 0, 
+			(struct sockaddr *)&from_addr, &fromlen);
+		
+		if (length > 0)
 		{
-			printf("tftp: out of sequence block! (got %d, expected %d)\n", this_block, current_block + 1);
-			if (this_block == current_block)
+			if(loc + length - 4 > maxlen)
 			{
-				printf("dupe.\n");
-				break;
+				if(loc > 0)
+					printf("\n");
+				printf("Exceded max length\n");
+				return -1;
 			}
+			memcpy(buffer + loc, &tftp_buffer[4], length - 4);
+			loc += length - 4;
+			//write(fd, (char*)&tftp_buffer[4], length - 4);
+			printf("#");
+
+			/* make ACK */			
+			tftp_buffer[0] = 0; tftp_buffer[1] = TFTP_ACK; /* opcode */
+			/* send ACK */
+			lwip_sendto(sock_fd, tftp_buffer, 4, 0, 
+				(struct sockaddr *)&from_addr, fromlen);
 		}
+	} while (length == 516);
 
-		last_size = pl;
-		send = 1;
-		break;
-	}
-	case 5: // ERROR
-		//printf("TFTP got ERROR\n");
-		tftp_state = TFTP_STATE_FINISH;
-			/* please don't overflow this. */
-		printf("tftp error %d: %s", (d[2] << 8) | d[3], d + 4);
-		tftp_result = -2;
-		break;
-	}
-	
-	if (tftp_state == TFTP_STATE_RRQ_SEND)
-	{
-		udp_connect(pcb, addr, port);
-		ts=mftb();
-		tftp_state = TFTP_STATE_ACK_SEND;
-	}
-	
-	tries = 0;
-	pbuf_free(p);
-}
-
-int send_ack(struct udp_pcb *pcb)
-{
-				struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, 4, PBUF_RAM);
-
-				if (!p)
-				{
-					printf("internal error: out of memory!\n");
-					return -1;
-				}
-				
-				unsigned char *d = p->payload;
-				
-				*d++ = 0;
-				*d++ = TFTP_OPCODE_ACK;
-				*d++ = current_block >> 8;
-				*d++ = current_block & 0xFF;
-				
-				if (udp_send(pcb, p))
-				{
-					printf("TFTP: packet send error.");
-					pbuf_free(p);
-					return -1;
-				}
-				pbuf_free(p);
-				
-
-				return 0;
-}
-
-int do_tftp(void *target, int maxlen, struct ip_addr server, const char *file)
-{
-/*	printf("TFTP boot from %u.%u.%u.%u:%s\n", 
-		ip4_addr1(&server), ip4_addr2(&server), ip4_addr3(&server), ip4_addr4(&server),
-		file);*/
-	
-	base = (unsigned char*)target;
-	image_maxlen = maxlen;
-	
-	struct udp_pcb *pcb = udp_new();
-	if (!pcb)
-	{
-		printf("internal error: out of memory (udp)\n");
+	if (length == 0){
+		if(loc > 0)
+			printf("\n");
+		printf("timeout\n");
 		return -1;
 	}
-	
-	udp_bind(pcb, IP_ADDR_ANY, htons(0x1234));
-	udp_recv(pcb, tftp_recv, 0);
-	
-	tftp_state = TFTP_STATE_RRQ_SEND;
-	current_block = 0;
-	last_size = 512;//Last size has to be 512 or greater - this should fix files smaller than 1 DATA packet
-	ptr = 0;
-	
-	start=mftb();
-	
-	send = 1;
-	
-	maxtries = 10;
-	tries = 0;
-
-	while (tftp_state != TFTP_STATE_FINISH)
+	else
 	{
-		uint64_t now;
-		now=mftb();
-		if (tb_diff_msec(now, start) > 500)
-		{
-			if (tftp_state == TFTP_STATE_RRQ_SEND)
-				tries == 0 ? printf("no answer from server"):printf(".");
-			else
-			{
-				if (!current_block)
-					tftp_state = TFTP_STATE_RRQ_SEND;
-				printf("TFTP: packet lost (%d)\n", current_block);
-			}
-			tries++;
-			if (tries >= maxtries / 2)
-			{
-				if (tftp_state != TFTP_STATE_RRQ_SEND)
-					printf("retry.\n");
-				tftp_state = TFTP_STATE_RRQ_SEND;
-				current_block = 0;
-				last_size = 0;
-			}
-			if (tries >= maxtries)
-			{
-				//printf("%d tries exceeded, aborting.\n", maxtries);
-				tftp_result = -2;
-				break;
-			}
-			start=mftb();
-			send = 1;
-		}
-		if (send)
-		{
-			switch (tftp_state)
-			{
-			case TFTP_STATE_RRQ_SEND:
-			{
-				struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, 2 + strlen(file) + 1 + 6, PBUF_RAM);
+		if(loc > 0)
+			printf("\n");
+		printf("Transfter of %i bytes compelted\n", loc);
+	}
 
-				if (!p)
-				{
-					printf("internal error: out of memory! (couldn't allocate %d bytes)\n", (int)(2 + strlen(file) + 1 + 6));
-					break;
-				}
-				
-				unsigned char *d = p->payload;
-				
-				*d++ = 0;
-				*d++ = TFTP_OPCODE_RRQ;
-				strcpy((char*)d, file);
-				d += strlen(file) + 1;
-				strcpy((char*)d, "octet");
-				d += 6;
-				
-				if (udp_sendto(pcb, p, &server, 69))
-					tries == 0?printf("TFTP: packet send error."):printf(".");
-				pbuf_free(p);
-				send = 0;
-				break;
-			}
-			case TFTP_STATE_ACK_SEND:
-			{
-				if(send_ack(pcb) != 0)
-				{
-					udp_remove(pcb);
-					return -1;
-				}
-				send = 0;
-				break;
-			}
-			default:
-				tftp_state = TFTP_STATE_FINISH;
-			}
-		}
-		network_poll();
-	}
-	
-	//printf("tftp result: %d\n", tftp_result);
-	if (!tftp_result)
-	{
-		if(send_ack(pcb) != 0)
-		{
-			udp_remove(pcb);
-			return -1;
-		}
-		uint64_t end;
-		end=mftb();
-		printf("%d packets (%d bytes, %d packet size), received in %dms, %d kb/s\n",
-			current_block, ptr, last_size, (int)tb_diff_msec(end, ts), 
-			(int)(ptr / 1024 * 1000 / tb_diff_msec(end, ts)));
-	}
-		
-	udp_remove(pcb);
-	
-	return (tftp_result < 0) ? tftp_result : ptr;
+	lwip_close(sock_fd);
+
+	return loc;
 }
-
 
 int boot_tftp(const char *server_addr, const char *tftp_bootfile)
 {
@@ -271,20 +108,6 @@ int boot_tftp(const char *server_addr, const char *tftp_bootfile)
 
 	//const char *msg = " was specified, neither manually nor via dhcp. aborting tftp.\n";
 	
-	ip_addr_t server_address;
-	//printf(server_addr);
-	if (!ipaddr_aton(server_addr, &server_address))
-	{
-		printf("no server address given");
-		server_address.addr = 0;
-	}
-	
-	if (!server_address.addr)
-	{
-		printf("no tftp server address");
-		//printf(msg);
-		return -1;
-	}
 	
 	if (!(tftp_bootfile && *tftp_bootfile))
 	{
@@ -296,7 +119,7 @@ int boot_tftp(const char *server_addr, const char *tftp_bootfile)
 	
 	void * elf_raw=malloc(ELF_MAXSIZE);
 	
-	int res = do_tftp(elf_raw, ELF_MAXSIZE, server_address, tftp_bootfile);
+	int res = do_tftp(elf_raw, ELF_MAXSIZE, server_addr, tftp_bootfile);
 	if (res < 0){
 		free(elf_raw);
 		return res;
